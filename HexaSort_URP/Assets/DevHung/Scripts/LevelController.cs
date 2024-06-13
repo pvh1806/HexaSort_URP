@@ -16,6 +16,8 @@ namespace DevHung.Scripts
         [SerializeField] private TextFullUi textFullUiPrefab;
         [SerializeField] private CameraController cameraController;
         [SerializeField] private PopUpGamePlay popUpGamePlay;
+        [SerializeField] private PopUpWin popUpWin;
+        [SerializeField] private PopUpLoss popUpLoss;
         private int indexCount;
         private int indexTotalHexa;
         public LevelData levelData;
@@ -110,8 +112,9 @@ namespace DevHung.Scripts
         public void Test()
         {
             Debug.Log( CacheGameData.Instance.IsCheckMove);
+            Debug.Log(CacheGameData.Instance.IsUpAnimation);
             Debug.Log( CacheGameData.Instance.IsSelect);
-            //Debug.Log( CacheGameData.Instance.IsSelect);
+            Debug.Log(CacheGameData.Instance.CurrentStackChip);
         }
 
         public void SpawnText(string text)
@@ -120,9 +123,30 @@ namespace DevHung.Scripts
             x.OnInit(text);
         }
         
-        public void Win()
+        public void WinGame()
         {
-            popUpGamePlay.OnClickNext();
+            Invoke(nameof(OpenPopUpWin),0.5f);
+        }
+
+        public void OpenPopUpWin()
+        {
+            popUpWin.gameObject.SetActive(true);
+        }
+        public void OnClickNext()
+        {
+            PlayerData.Instance.SetLevel();
+            ClearDataChipBg();
+            CacheGameData.Instance.Refresh();
+            Instance.OnInit();
+            popUpGamePlay.SetText();
+        }
+        public void LossGame()
+        {
+            Invoke(nameof(OpenPopUpLose),0.5f);
+        }
+        public void OpenPopUpLose()
+        {
+            popUpLoss.gameObject.SetActive(true);
         }
     }
 }

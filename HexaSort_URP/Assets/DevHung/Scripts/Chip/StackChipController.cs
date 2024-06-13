@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using DevHung.DataSO;
@@ -56,14 +57,33 @@ namespace DevHung.Scripts
         private void AnimateChipRecursive(List<Chip> chipList, int index)
         {
             if (index > chipList.Count) return;
-            if(index == chipList.Count)  CacheGameData.Instance.IsUpAnimation = false;
             var chip = chipList[index];
             CacheGameData.Instance.ChipUp.Add(chip, chip.transform.localPosition.y);
+            if (index < chipList.Count)
+            {
+                DOVirtual.DelayedCall(0.1f, () =>
+                {
+                    MoveChip(chipList, index);
+                    if(!CacheGameData.Instance.IsSelect) return;
+                    AnimateChipRecursive(chipList, index + 1);
+                });
+            }
+            if (index == chipList.Count -1 )
+            {
+                MoveChip(chipList, index,(() =>
+                {
+                    CacheGameData.Instance.IsUpAnimation = false;
+                }));
+            }
+        }
+
+        private void MoveChip(List<Chip> chipList, int index, Action completed = null)
+        {
+            var chip = chipList[index];
             chip.transform.DOLocalMove(new Vector3(0, chip.transform.localPosition.y + increaseY, 0), 0.1f).SetEase(Ease.OutCubic)
                 .OnComplete(() =>
                 {
-                    if(!CacheGameData.Instance.IsSelect) return;
-                    AnimateChipRecursive(chipList, index + 1);
+                    completed?.Invoke();
                 });
         }
  
@@ -75,7 +95,6 @@ namespace DevHung.Scripts
             {
                 count += stackChipList[i].Count;
             }
-            Debug.Log(count);
             return count;
         }
         public void DoAnimationDownStack()
@@ -84,9 +103,7 @@ namespace DevHung.Scripts
             {
                 Chip chip = entry.Key;
                 float value = entry.Value;
-                chip.transform
-                    .DOLocalMove(new Vector3(0, value, 0), 0.2f)
-                    .SetEase(Ease.OutExpo);
+                chip.transform.DOLocalMove(new Vector3(0, value, 0), 0.2f).SetEase(Ease.OutExpo);
             }
             
             CacheGameData.Instance.ChipUp.Clear();
@@ -101,7 +118,7 @@ namespace DevHung.Scripts
 
         public void RemoveStack()
         {
-            stackChipList.Remove(GetStackChip());
+            stackChipList.RemoveAt(stackChipList.Count-1);
         }
         private void InitializeNewStack()
         {
