@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
+using DevHung.Scripts.Chip;
+using DevHung.Scripts.Manager;
 using DevHung.Scripts.UI;
 using DG.Tweening;
 using UnityEngine;
@@ -11,41 +13,44 @@ namespace DevHung.Scripts
         public bool IsSelect { get; set; }
         public int MaxChip { get; set; }
         public bool IsUpAnimation;
-        public readonly Dictionary<Chip, float> ChipUp = new();
+        public readonly Dictionary<Chip.Chip, float> ChipUp = new();
         public bool IsCheckMove = true;
-        public StackChipController CurrentStackChip;
+        private StackChipController currentStackChip;
         private const float TimeDelayChipMove = 0.1f;
-        private readonly Stack<StackState> previousStates = new ();
+        private readonly Stack<StackState> previousStates = new();
+        private List<StackChipController> stackChipControllersComplete = new();
         private int numberComplete;
         private PopUpGamePlay popUpGamePlay;
         private int countMove = -1;
+
         public void CheckStackListChip(StackChipController stackChipControllerTarget)
         {
             IsCheckMove = true;
-            if (CurrentStackChip == null)
+            if (currentStackChip == null)
             {
-                CurrentStackChip = stackChipControllerTarget;
-                if (CurrentStackChip.GetStackChip() != null && CurrentStackChip.GetStackChip().Count == MaxChip)
+                currentStackChip = stackChipControllerTarget;
+                if (currentStackChip.GetStackChip() != null && currentStackChip.GetStackChip().Count == MaxChip)
                 {
-                    CurrentStackChip = null;
+                    currentStackChip = null;
                     IsSelect = false;
                     IsCheckMove = false;
                 }
                 else DoAnimationStack();
+
                 return;
             }
 
-            if (stackChipControllerTarget != CurrentStackChip)
+            if (stackChipControllerTarget != currentStackChip)
             {
                 if (!IsSelect)
                 {
-                    CurrentStackChip = stackChipControllerTarget;
+                    currentStackChip = stackChipControllerTarget;
                     DoAnimationStack();
                 }
-                else if (IsUpAnimation && CurrentStackChip != null)
+                else if (IsUpAnimation && currentStackChip != null)
                 {
-                    CurrentStackChip.DoAnimationDownStack();
-                    CurrentStackChip = null;
+                    currentStackChip.DoAnimationDownStack();
+                    currentStackChip = null;
                     IsCheckMove = false;
                 }
                 else CheckMoveStack(stackChipControllerTarget);
@@ -55,10 +60,10 @@ namespace DevHung.Scripts
 
         private void DoAnimationStack()
         {
-            var y = CurrentStackChip.GetStackChip();
+            var y = currentStackChip.GetStackChip();
             if (y == null) return;
-            if (IsSelect) CurrentStackChip.DoAnimationDownStack();
-            else CurrentStackChip.DoAnimationUpStack(y);
+            if (IsSelect) currentStackChip.DoAnimationDownStack();
+            else currentStackChip.DoAnimationUpStack(y);
             IsCheckMove = false;
         }
 
@@ -68,12 +73,13 @@ namespace DevHung.Scripts
             {
                 Vector3 target = stackChipControllerTarget.transform.position + new Vector3(0, 0.005f, 0);
                 stackChipControllerTarget.AddStack();
-                RemoveStack(stackChipControllerTarget, CurrentStackChip.GetStackChip().Count - 1, target);
+                RemoveStack(stackChipControllerTarget, currentStackChip.GetStackChip().Count - 1, target,
+                    SetFloatTimerMove(currentStackChip.GetStackChip().Count - 1));
             }
             else
             {
                 if (stackChipControllerTarget.GetStackChip().Peek().ChipType !=
-                    CurrentStackChip.GetStackChip().Peek().ChipType)
+                    currentStackChip.GetStackChip().Peek().ChipType)
                 {
                     DoAnimationStack();
                     return;
@@ -86,44 +92,48 @@ namespace DevHung.Scripts
                     return;
                 }
 
-                if (stackChipControllerTarget.GetCountList() + CurrentStackChip.GetStackChip().Count > MaxChip)
+                if (stackChipControllerTarget.GetCountList() + currentStackChip.GetStackChip().Count > MaxChip)
                 {
-                    int countMove = MaxChip - stackChipControllerTarget.GetCountList();
+                    int countList = MaxChip - stackChipControllerTarget.GetCountList();
                     Vector3 target = stackChipControllerTarget.GetStackChip().Peek().transform.position +
                                      new Vector3(0, 0.005f, 0);
-                    RemoveStack(stackChipControllerTarget, countMove - 1, target);
+                    RemoveStack(stackChipControllerTarget, countList - 1, target, SetFloatTimerMove(countList - 1));
                 }
                 else
                 {
                     Vector3 target = stackChipControllerTarget.GetStackChip().Peek().transform.position +
                                      new Vector3(0, 0.005f, 0);
-                    RemoveStack(stackChipControllerTarget, CurrentStackChip.GetStackChip().Count - 1, target);
+                    RemoveStack(stackChipControllerTarget, currentStackChip.GetStackChip().Count - 1, target,
+                        SetFloatTimerMove(currentStackChip.GetStackChip().Count - 1));
                 }
             }
         }
-        
-        private void RemoveStack(StackChipController stackChipControllerTarget, int index, Vector3 target, bool unDo = false)
+
+        private void RemoveStack(StackChipController stackChipControllerTarget, int index, Vector3 target,
+            float timerMove, bool unDo = false)
         {
-            if (index < 0 || CurrentStackChip == null)
+            if (index < 0 || currentStackChip == null)
             {
                 return;
             }
-            var x = CurrentStackChip.GetStackChip().Pop();
+
+            var x = currentStackChip.GetStackChip().Pop();
             x.gameObject.transform.SetParent(stackChipControllerTarget.transform);
             stackChipControllerTarget.GetStackChip().Push(x);
             ChipUp.Remove(x);
             if (index > 0)
             {
-                x.MoveChip(target, 0.3f, new Vector3(0, 0, 180));
+                x.MoveChip(target, timerMove, new Vector3(0, 0, 180));
             }
+
             if (index == 0)
             {
-                x.MoveChip(target, 0.3f, new Vector3(0, 0, 180), () =>
+                x.MoveChip(target, timerMove, new Vector3(0, 0, 180), () =>
                 {
-                    CheckStackControllerTarget(stackChipControllerTarget,unDo);
+                    CheckStackControllerTarget(stackChipControllerTarget, unDo);
                     CheckCurrentChip(unDo);
                     IsCheckMove = false;
-                    CurrentStackChip = null;
+                    currentStackChip = null;
                 });
             }
             else
@@ -131,33 +141,43 @@ namespace DevHung.Scripts
                 DOVirtual.DelayedCall(TimeDelayChipMove,
                     () =>
                     {
-                        RemoveStack(stackChipControllerTarget, index - 1, target + new Vector3(0, 0.005f, 0), unDo);
+                        RemoveStack(stackChipControllerTarget, index - 1, target + new Vector3(0, 0.005f, 0), timerMove,
+                            unDo);
                     });
             }
         }
 
         private void CheckCurrentChip(bool unDo)
         {
-            if (CurrentStackChip.GetStackChip().Count == 0)
+            if (currentStackChip.GetStackChip().Count == 0)
             {
-                CurrentStackChip.RemoveStack();
+                currentStackChip.RemoveStack();
                 if (!unDo && previousStates.Count > 0) previousStates.Peek().IsAddNewStack = true;
                 IsSelect = false;
             }
-            else CurrentStackChip.DoAnimationDownStack();
-            if(!unDo && countMove != -1) CheckLoss();
+            else currentStackChip.DoAnimationDownStack();
+
+            if (!unDo && countMove != -1) CheckLoss();
         }
+
         private void CheckStackControllerTarget(StackChipController stackChipControllerTarget, bool unDo)
         {
             if (stackChipControllerTarget.GetStackChip().Count == MaxChip)
             {
                 stackChipControllerTarget.GetComponentInParent<ChipBG>().FullStack();
+                stackChipControllersComplete.Add(stackChipControllerTarget);
                 numberComplete++;
                 if (numberComplete == LevelController.Instance.levelData.totalChipType)
                 {
-                    numberComplete = 0;
+                    for (int i = 0; i < stackChipControllersComplete.Count; i++)
+                    {
+                        stackChipControllersComplete[i].MoveAllChip();
+                    }
+
                     LevelController.Instance.WinGame();
+                    numberComplete = 0;
                 }
+
                 if (!unDo) previousStates.Clear();
                 IsSelect = false;
             }
@@ -167,24 +187,27 @@ namespace DevHung.Scripts
                     previousStates.Push(new StackState
                     {
                         SourceStack = stackChipControllerTarget,
-                        TargetStack = CurrentStackChip,
+                        TargetStack = currentStackChip,
                         IsAddNewStack = false
                     });
             }
         }
+
         public void Refresh()
         {
-            CurrentStackChip = null;
+            currentStackChip = null;
             IsCheckMove = false;
             IsSelect = false;
             previousStates.Clear();
+            ClearStackComplete();
         }
 
-        public void SetUpCountMove(int _countMove , PopUpGamePlay _popUpGamePlay)
+        public void SetUpCountMove(int _countMove, PopUpGamePlay _popUpGamePlay)
         {
             countMove = _countMove;
             popUpGamePlay = _popUpGamePlay;
         }
+
         public void UndoStack()
         {
             if (previousStates.Count == 0 || IsCheckMove)
@@ -192,9 +215,11 @@ namespace DevHung.Scripts
                 LevelController.Instance.SpawnText("Undo is over");
                 return;
             }
+
             var lastState = previousStates.Pop();
-            CurrentStackChip = lastState.SourceStack;
-            Vector3 target = lastState.TargetStack.GetStackChip().Peek().transform.position + new Vector3(0, 0.005f, 0);;
+            currentStackChip = lastState.SourceStack;
+            Vector3 target = lastState.TargetStack.GetStackChip().Peek().transform.position + new Vector3(0, 0.005f, 0);
+            ;
             if (lastState.IsAddNewStack) lastState.TargetStack.AddStack();
             IsCheckMove = true;
             if (countMove > 0)
@@ -202,7 +227,14 @@ namespace DevHung.Scripts
                 countMove++;
                 popUpGamePlay.SetTextMove(countMove);
             }
-            RemoveStack(lastState.TargetStack,CurrentStackChip.GetStackChip().Count-1,target,true);
+
+            RemoveStack(lastState.TargetStack, currentStackChip.GetStackChip().Count - 1, target,
+                SetFloatTimerMove(currentStackChip.GetStackChip().Count - 1), true);
+        }
+
+        private float SetFloatTimerMove(int _countMove)
+        {
+            return _countMove <= 3 ? 0.3f : 0.15f;
         }
 
         private void CheckLoss()
@@ -217,6 +249,11 @@ namespace DevHung.Scripts
                     LevelController.Instance.LossGame();
                     break;
             }
+        }
+
+        public void ClearStackComplete()
+        {
+            stackChipControllersComplete.Clear();
         }
         private class StackState
         {

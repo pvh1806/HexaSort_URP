@@ -6,7 +6,7 @@ using DG.Tweening;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-namespace DevHung.Scripts
+namespace DevHung.Scripts.Chip
 {
     public class StackChipController : MonoBehaviour
     {
@@ -148,10 +148,33 @@ namespace DevHung.Scripts
             var chipObject = Instantiate(prefab, transform);
             chipObject.transform.localPosition = posSpawn;
 
-            var chip = chipObject.GetComponent<Chip>();
+            var chip = chipObject.GetComponent<Scripts.Chip.Chip>();
             if (chip == null) return;
             chip.Spawn(0.2f, this, chipType);
             currentStack.Push(chip);
+        }
+        [Button]
+        public void MoveAllChip()
+        {
+            if (stackChipList.Count == 0) return;
+            gameObject.GetComponentInParent<ChipBG>().HideVfx();
+            var allChips = stackChipList.SelectMany(stack => stack.Reverse()).ToList();
+            AnimateChipsDown(allChips, allChips.Count - 1);
+        }
+
+        private void AnimateChipsDown(List<Chip> chipList, int index)
+        {
+            if (index < 1) return;
+            var chip = chipList[index];
+            if (index == 1) chip.transform.DOScale(Vector3.zero, 0.3f).SetEase(Ease.OutCubic);
+            else
+            {
+                chip.transform.DOScale(Vector3.zero, 0.3f).SetEase(Ease.OutCubic);
+                DOVirtual.DelayedCall(0.1f, () =>
+                {
+                    AnimateChipsDown(chipList, index - 1);
+                });
+            }
         }
     }
 }

@@ -1,3 +1,4 @@
+using DevHung.Scripts.Chip;
 using UnityEngine;
 
 namespace DevHung.Scripts
@@ -9,8 +10,7 @@ namespace DevHung.Scripts
             if (!Input.GetMouseButtonDown(0)) return;
             RaycastHit hit = CastRay();
             if (hit.collider == null) return;
-            StackChipController x;
-            x = hit.collider.CompareTag("Chip") ? hit.collider.GetComponentInParent<StackChipController>() : hit.collider.GetComponent<ChipBG>().GetStackController();
+            var x = hit.collider.CompareTag("Chip") ? hit.collider.GetComponentInParent<StackChipController>() : hit.collider.GetComponent<ChipBG>().GetStackController();
             if (!CacheGameData.Instance.IsCheckMove)
                 CacheGameData.Instance.CheckStackListChip(x);
         }

@@ -1,22 +1,24 @@
 using DevHung.DataSO;
+using DevHung.Scripts.Chip;
 using DevHung.Scripts.Data;
 using DevHung.Scripts.DesginPattern;
 using DevHung.Scripts.UI;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-namespace DevHung.Scripts
+namespace DevHung.Scripts.Manager
 {
     public class LevelController : MonoSingleton<LevelController>
     {
         [SerializeField] private LevelData[] listLevelData;
         [SerializeField] private StackChipController stackChipControllerPrefabs;
         [SerializeField] private ChipBG[] chipBgs;
+        [SerializeField] private ChipBG[] chipBgLevel1;
         [SerializeField] private GameObject textSpawnParent;
         [SerializeField] private TextFullUi textFullUiPrefab;
         [SerializeField] private CameraController cameraController;
         [SerializeField] private PopUpGamePlay popUpGamePlay;
-        [SerializeField] private PopUpWin popUpWin;
+        [SerializeField] private AnimationWin animationWin;
         [SerializeField] private PopUpLoss popUpLoss;
         private int indexCount;
         private int indexTotalHexa;
@@ -26,6 +28,21 @@ namespace DevHung.Scripts
         {
             InitLevelData();
             HideAll();
+            if(PlayerData.Instance.GetLevel() == 0)
+            {
+                for (int i = 0; i < chipBgLevel1.Length; i++)
+                {
+                    chipBgLevel1[i].gameObject.SetActive(true);
+                    var x = Instantiate(stackChipControllerPrefabs, chipBgLevel1[i].transform);
+                    x.OnInit(levelData.listStackChips[i]);
+                    chipBgLevel1[i].OnInit(x);
+                }
+                return;
+            }
+            for (int i = chipBgLevel1.Length - 1; i >= 0; i--)
+            {
+                chipBgLevel1[i].gameObject.SetActive(false);
+            }
             for (int i = 0; i < indexTotalHexa; i++)
             {
                 chipBgs[i].gameObject.SetActive(true);
@@ -34,6 +51,10 @@ namespace DevHung.Scripts
             SpawnHexa();
         }
 
+        public StackChipController SetupStackControllerToTutorial(int indexTutorial)
+        { 
+            return chipBgLevel1[indexTutorial].GetStackController();
+        }
         private void AddStackEmpty()
         {
             var x = Instantiate(stackChipControllerPrefabs, chipBgs[indexCount].transform);
@@ -69,7 +90,7 @@ namespace DevHung.Scripts
             CacheGameData.Instance.Refresh();
         }
 
-        public void ClearDataChipBg()
+        private void ClearDataChipBg()
         {
             for (int i = 0; i < indexTotalHexa; i++)
             {
@@ -111,12 +132,8 @@ namespace DevHung.Scripts
         [Button]
         public void Test()
         {
-            Debug.Log( CacheGameData.Instance.IsCheckMove);
-            Debug.Log(CacheGameData.Instance.IsUpAnimation);
-            Debug.Log( CacheGameData.Instance.IsSelect);
-            Debug.Log(CacheGameData.Instance.CurrentStackChip);
+            CacheGameData.Instance.IsCheckMove = true;
         }
-
         public void SpawnText(string text)
         {
             var x = Instantiate(textFullUiPrefab, textSpawnParent.transform);
@@ -125,24 +142,29 @@ namespace DevHung.Scripts
         
         public void WinGame()
         {
-            Invoke(nameof(OpenPopUpWin),0.5f);
+            Invoke(nameof(OpenPopWin),1.5f);
         }
-
-        public void OpenPopUpWin()
-        {
-            popUpWin.gameObject.SetActive(true);
-        }
+        
         public void OnClickNext()
         {
             PlayerData.Instance.SetLevel();
-            ClearDataChipBg();
+            int level =  PlayerData.Instance.GetLevel();
+            if (level == 1)
+            {
+                popUpGamePlay.SetActiveButton(true);
+            }
+            else ClearDataChipBg();
             CacheGameData.Instance.Refresh();
-            Instance.OnInit();
+            OnInit();
             popUpGamePlay.SetText();
         }
         public void LossGame()
         {
             Invoke(nameof(OpenPopUpLose),0.5f);
+        }
+        public void OpenPopWin()
+        {
+            animationWin.gameObject.SetActive(true);
         }
         public void OpenPopUpLose()
         {

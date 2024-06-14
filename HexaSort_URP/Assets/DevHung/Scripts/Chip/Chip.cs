@@ -1,9 +1,10 @@
 using System;
 using DevHung.DataSO;
+using DevHung.Scripts.Manager.Audio;
 using DG.Tweening;
 using UnityEngine;
 
-namespace DevHung.Scripts
+namespace DevHung.Scripts.Chip
 {
     public class Chip : MonoBehaviour
     {
@@ -18,6 +19,7 @@ namespace DevHung.Scripts
         {
             transform.DORotate(transform.eulerAngles + rotate, timeMove, RotateMode.FastBeyond360).SetEase(Ease.InOutSine);
             transform.DOJump(targetPos, 0.05f, 1, timeMove).SetEase(Ease.InOutSine).OnComplete(() => completed?.Invoke());
+            AudioManager.instance.Play("MoveChip");
         }
     }
 }

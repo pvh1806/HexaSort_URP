@@ -1,3 +1,4 @@
+using DevHung.Scripts.Chip;
 using UnityEngine;
 
 namespace DevHung.Scripts
@@ -24,6 +25,10 @@ namespace DevHung.Scripts
         public void FullStack()
         {
             vfxWin.gameObject.SetActive(true);
+        }
+        public void HideVfx()
+        {
+            vfxWin.gameObject.SetActive(false);
         }
     }
 }
